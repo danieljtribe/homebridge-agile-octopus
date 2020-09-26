@@ -47,7 +47,7 @@ export class AgileOctopusAccessory {
 
     switches.forEach(async sw => {
       sw.cheapestPeriod = await this.calculateCheapest(body, sw.blocks);
-      this.platform.log.info(sw.blocks, ':', sw.cheapestPeriod.startTime.toISOString(), sw.cheapestPeriod.endTime.toISOString(), sw.cheapestPeriod.meanCost);
+      this.platform.log.info(`Cheapest ${sw.blocks*30} slot between ${sw.cheapestPeriod.startTime.toISOString()} and ${sw.cheapestPeriod.endTime.toISOString()}, cost: ${sw.cheapestPeriod.meanCost}`);
     });
 
     setInterval(() => {
@@ -72,7 +72,7 @@ export class AgileOctopusAccessory {
 
       switches.forEach(async sw => {
         sw.cheapestPeriod = await this.calculateCheapest(body, sw.blocks);
-        this.platform.log.info(sw.blocks, ':', sw.cheapestPeriod.startTime.toISOString(), sw.cheapestPeriod.endTime.toISOString(), sw.cheapestPeriod.meanCost);
+        this.platform.log.info(`Cheapest ${sw.blocks*30} slot between ${sw.cheapestPeriod.startTime.toISOString()} and ${sw.cheapestPeriod.endTime.toISOString()}, cost: ${sw.cheapestPeriod.meanCost}`);
       });
     }, 3600000);
   }
