@@ -1,5 +1,5 @@
 {
-  "private": true,
+  "private": false,
   "displayName": "Agile Octopus Rates",
   "name": "homebridge-agile-octopus-rates",
   "version": "1.0.0",
@@ -21,7 +21,7 @@
     "lint": "eslint src/**.ts",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "npm run lint && npm run build"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "homebridge-plugin"
