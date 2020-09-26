@@ -47,7 +47,7 @@ export class AgileOctopusAccessory {
 
     switches.forEach(async sw => {
       sw.cheapestPeriod = await this.calculateCheapest(body, sw.blocks);
-      this.platform.log.debug(sw.blocks, ':', sw.cheapestPeriod.startTime, sw.cheapestPeriod.endTime, sw.cheapestPeriod.meanCost);
+      this.platform.log.info(sw.blocks, ':', sw.cheapestPeriod.startTime.toISOString(), sw.cheapestPeriod.endTime.toISOString(), sw.cheapestPeriod.meanCost);
     });
 
     setInterval(() => {
@@ -56,7 +56,7 @@ export class AgileOctopusAccessory {
           if(!sw.state) {
             sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
             sw.state = true;
-            this.platform.log.debug('Triggering switch for cheapest ' + sw.blocks * 30 + ' minute block', true);
+            this.platform.log.info('Triggering switch for cheapest ' + sw.blocks * 30 + ' minute block', true);
           }
         } else {
           sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
@@ -72,7 +72,7 @@ export class AgileOctopusAccessory {
 
       switches.forEach(async sw => {
         sw.cheapestPeriod = await this.calculateCheapest(body, sw.blocks);
-        this.platform.log.debug(sw.blocks, ':', sw.cheapestPeriod.startTime, sw.cheapestPeriod.endTime, sw.cheapestPeriod.meanCost);
+        this.platform.log.info(sw.blocks, ':', sw.cheapestPeriod.startTime.toISOString(), sw.cheapestPeriod.endTime.toISOString(), sw.cheapestPeriod.meanCost);
       });
     }, 3600000);
   }
