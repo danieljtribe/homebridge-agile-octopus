@@ -4,9 +4,10 @@ Just a simple plugin to publish switches to Homebridge, which toggle on during t
 
 ## Config
 
-Add the following to the 'platforms' section to the Homebridge config.json, set the region letter from your tariff eg the last letter of: "E-1R-AGILE-18-02-21-L"
+Add the following to the 'platforms' section to the Homebridge config.json, set the region letter from your tariff eg the last letter ('L') of: "E-1R-AGILE-18-02-21-__L__"
 
-  "platforms": [
+  ```"platforms": 
+  [
     {
       "platform" : "AgileOctopusRates",
       "name" : "Agile Octopus Rates",
@@ -14,6 +15,7 @@ Add the following to the 'platforms' section to the Homebridge config.json, set 
       "lowPriceThreshold": 10.0
     }
   ]
+  ```
 
   ## Issues
 
