@@ -9,7 +9,19 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "Agile Octopus Rates"
+        "default": "Agile Octopus"
+      },
+      "region": {
+        "title": "Region",
+        "type": "string",
+        "required": true,
+        "default": "L"
+      },
+      "lowPriceThreshold": {
+        "title": "Low price threshold in pence",
+        "type": "number",
+        "required": false,
+        "default": 15.0
       }
     }
   }
