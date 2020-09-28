@@ -117,7 +117,7 @@ export class AgileOctopusAccessory {
 
     await this.switches.forEach(async sw => {
       sw.cheapestPeriod = await this.calculateCheapest(this.data, sw.blocks);
-      this.platform.log.info(`Cheapest ${sw.blocks*30} slot between ${sw.cheapestPeriod.startTime.toISOString()} and ${sw.cheapestPeriod.endTime.toISOString()}, cost: ${sw.cheapestPeriod.meanCost}`);
+      this.platform.log.info(`The cheapest ${sw.blocks*30} minute slot is between ${sw.cheapestPeriod.startTime.toISOString()} and ${sw.cheapestPeriod.endTime.toISOString()}, cost: ${sw.cheapestPeriod.meanCost}`);
     });
     return;
   }
