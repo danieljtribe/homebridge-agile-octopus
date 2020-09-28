@@ -33,14 +33,14 @@ export class AgileOctopusAccessory {
     this.switches.push({blocks: 6, accessory: this.accessory.getService('Cheapest 3hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 3hr period', 'c-180')});
     this.switches.push({blocks: 7, accessory: this.accessory.getService('Cheapest 3hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 3hr and 30m period', 'c-210')});
     this.switches.push({blocks: 8, accessory: this.accessory.getService('Cheapest 4hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 4hr period', 'c-240')});
-    /*switches.push({blocks: 9, accessory: this.accessory.getService('Cheapest 4hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 4hr and 30m period', 'c-270')});
-    switches.push({blocks: 10, accessory: this.accessory.getService('Cheapest 5hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 5hr period', 'c-300')});
-    switches.push({blocks: 11, accessory: this.accessory.getService('Cheapest 5hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 5hr and 30m period', 'c-330')});
-    switches.push({blocks: 12, accessory: this.accessory.getService('Cheapest 6hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 6hr period', 'c-360')});
-    switches.push({blocks: 13, accessory: this.accessory.getService('Cheapest 6hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 6hr and 30m period', 'c-390')});
-    switches.push({blocks: 14, accessory: this.accessory.getService('Cheapest 7hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 7hr period', 'c-420')});
-    switches.push({blocks: 15, accessory: this.accessory.getService('Cheapest 7hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 7hr and 30m period', 'c-450')});
-    switches.push({blocks: 16, accessory: this.accessory.getService('Cheapest 8hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 8hr period', 'c-480')});*/
+    this.switches.push({blocks: 9, accessory: this.accessory.getService('Cheapest 4hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 4hr and 30m period', 'c-270')});
+    this.switches.push({blocks: 10, accessory: this.accessory.getService('Cheapest 5hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 5hr period', 'c-300')});
+    this.switches.push({blocks: 11, accessory: this.accessory.getService('Cheapest 5hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 5hr and 30m period', 'c-330')});
+    this.switches.push({blocks: 12, accessory: this.accessory.getService('Cheapest 6hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 6hr period', 'c-360')});
+    /*this.switches.push({blocks: 13, accessory: this.accessory.getService('Cheapest 6hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 6hr and 30m period', 'c-390')});
+    this.switches.push({blocks: 14, accessory: this.accessory.getService('Cheapest 7hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 7hr period', 'c-420')});
+    this.switches.push({blocks: 15, accessory: this.accessory.getService('Cheapest 7hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 7hr and 30m period', 'c-450')});
+    this.switches.push({blocks: 16, accessory: this.accessory.getService('Cheapest 8hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 8hr period', 'c-480')});*/
 
     await this.refreshData();
 
