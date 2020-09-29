@@ -6,7 +6,7 @@ Just a simple plugin to publish switches to Homebridge, which toggle on during t
 
 Add the following to the 'platforms' section to the Homebridge config.json, set the region letter from your tariff eg the last letter ('L') of: "E-1R-AGILE-18-02-21-__L__"
 
-  ```"platforms": 
+  ```"platforms":
   [
     {
       "platform" : "AgileOctopusRates",
