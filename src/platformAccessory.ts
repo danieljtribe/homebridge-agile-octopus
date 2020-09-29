@@ -1,9 +1,11 @@
-import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback } from 'homebridge';
+import { Service, PlatformAccessory } from 'homebridge';
 
 import { AgileOctopusPlatform } from './platform';
 const moment = require('moment');
 
 export class AgileOctopusAccessory {
+  private service: Service;
+
   private switches = [] as any;
   private data = {} as any;
 
@@ -16,6 +18,9 @@ export class AgileOctopusAccessory {
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Octopus Energy')
       .setCharacteristic(this.platform.Characteristic.Model, 'Agile Octopus')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Agile Octopus');
+
+    this.service = this.accessory.getService(this.platform.Service.TemperatureSensor) || this.accessory.addService(this.platform.Service.TemperatureSensor);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, "Current price per unit");
     this.init();
   }
 
@@ -41,7 +46,6 @@ export class AgileOctopusAccessory {
 
     const swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
     const swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
-    const thCurrentPrice = this.accessory.getService('Current price per unit') || this.accessory.addService(this.platform.Service.TemperatureSensor, 'Current price per unit', 'current-price');
 
     const customLowPriceThreshold = (this.config.lowPriceThreshold && this.config.lowPriceThreshold.toFixed(2) !== NaN ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
 
@@ -62,7 +66,7 @@ export class AgileOctopusAccessory {
 
       let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
       if(currentSlot) {
-        thCurrentPrice.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
         swNegative.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= 0.00);
         swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= customLowPriceThreshold);
       }
