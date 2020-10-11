@@ -5,9 +5,12 @@ const moment = require('moment');
 
 export class AgileOctopusAccessory {
   private service: Service;
-
   private switches = [] as any;
+  private swNegative: any;
+  private swCheapCustom: any;
   private data = {} as any;
+
+  private periodDefinitions = [] as any;
 
   constructor(
     private readonly platform: AgileOctopusPlatform,
@@ -21,54 +24,66 @@ export class AgileOctopusAccessory {
 
     this.service = this.accessory.getService(this.platform.Service.TemperatureSensor) || this.accessory.addService(this.platform.Service.TemperatureSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, "Current price per unit");
+    var currentPrice = this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature);
+    currentPrice.setProps({minStep: 0.01});
+
+    this.periodDefinitions.push({blocks: 1, id: 'c-30', title: 'Cheapest 30m period'});
+    this.periodDefinitions.push({blocks: 2, id: 'c-60', title: 'Cheapest 1hr period'});
+    this.periodDefinitions.push({blocks: 3, id: 'c-90', title: 'Cheapest 1hr and 30m period'});
+    this.periodDefinitions.push({blocks: 4, id: 'c-120', title: 'Cheapest 2hr period'});
+    this.periodDefinitions.push({blocks: 5, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
+    this.periodDefinitions.push({blocks: 6, id: 'c-180', title: 'Cheapest 3hr period'});
+    this.periodDefinitions.push({blocks: 7, id: 'c-210', title: 'Cheapest 3hr and 30m period'});
+    this.periodDefinitions.push({blocks: 8, id: 'c-240', title: 'Cheapest 4hr period'});
+    this.periodDefinitions.push({blocks: 9, id: 'c-270', title: 'Cheapest 4hr and 30m period'});
+    this.periodDefinitions.push({blocks: 10, id: 'c-300', title: 'Cheapest 5hr period'});
+    this.periodDefinitions.push({blocks: 11, id: 'c-330',title: 'Cheapest 5hr and 30m period'});
+    this.periodDefinitions.push({blocks: 12, id: 'c-360', title: 'Cheapest 6hr period'});
+
     this.init();
   }
 
   async init() {
-    this.switches.push({blocks: 1, accessory: this.accessory.getService('Cheapest 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 30m period', 'c-30')});
-    this.switches.push({blocks: 2, accessory: this.accessory.getService('Cheapest 1hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 1hr period', 'c-60')});
-    this.switches.push({blocks: 3, accessory: this.accessory.getService('Cheapest 1hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 1hr and 30m period', 'c-90')});
-    this.switches.push({blocks: 4, accessory: this.accessory.getService('Cheapest 2hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 2hr period', 'c-120')});
-    this.switches.push({blocks: 5, accessory: this.accessory.getService('Cheapest 2hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 2hr and 30m period', 'c-150')});
-    this.switches.push({blocks: 6, accessory: this.accessory.getService('Cheapest 3hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 3hr period', 'c-180')});
-    this.switches.push({blocks: 7, accessory: this.accessory.getService('Cheapest 3hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 3hr and 30m period', 'c-210')});
-    this.switches.push({blocks: 8, accessory: this.accessory.getService('Cheapest 4hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 4hr period', 'c-240')});
-    this.switches.push({blocks: 9, accessory: this.accessory.getService('Cheapest 4hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 4hr and 30m period', 'c-270')});
-    this.switches.push({blocks: 10, accessory: this.accessory.getService('Cheapest 5hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 5hr period', 'c-300')});
-    this.switches.push({blocks: 11, accessory: this.accessory.getService('Cheapest 5hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 5hr and 30m period', 'c-330')});
-    this.switches.push({blocks: 12, accessory: this.accessory.getService('Cheapest 6hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 6hr period', 'c-360')});
-    /*this.switches.push({blocks: 13, accessory: this.accessory.getService('Cheapest 6hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 6hr and 30m period', 'c-390')});
-    this.switches.push({blocks: 14, accessory: this.accessory.getService('Cheapest 7hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 7hr period', 'c-420')});
-    this.switches.push({blocks: 15, accessory: this.accessory.getService('Cheapest 7hr and 30m period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 7hr and 30m period', 'c-450')});
-    this.switches.push({blocks: 16, accessory: this.accessory.getService('Cheapest 8hr period') || this.accessory.addService(this.platform.Service.Switch, 'Cheapest 8hr period', 'c-480')});*/
+    if(!this.config.disableSwitches) {
+      this.periodDefinitions.forEach(period => {
+        this.switches.push({blocks: period.blocks, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
+      });
+      this.swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
+      this.swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
+    } else {
+      this.periodDefinitions.forEach(async period => {
+        await this.deregisterService(period.title);
+      });
+      await this.deregisterService('Negative price period');
+      await this.deregisterService('Low price period');
+    }
 
     await this.refreshData();
-
-    const swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
-    const swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
 
     const customLowPriceThreshold = (this.config.lowPriceThreshold && this.config.lowPriceThreshold.toFixed(2) !== NaN ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
 
     // Set switch states - 10 seconds, there are probably more efficient ways to do this..
     setInterval(async () => {
-      this.switches.forEach(async sw => {
-        if(moment().isAfter(sw.cheapestPeriod.startTime) && moment().isBefore(sw.cheapestPeriod.endTime)) {
-          if(!sw.state) {
-            sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
-            sw.state = true;
-            this.platform.log.info('Triggering switch for cheapest ' + sw.blocks * 30 + ' minute block', true);
+      if(!this.config.disableSwitches) {
+        this.switches.forEach(async sw => {
+          if(moment().isAfter(sw.cheapestPeriod.startTime) && moment().isBefore(sw.cheapestPeriod.endTime)) {
+            if(!sw.state) {
+              sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
+              sw.state = true;
+              this.platform.log.info('Triggering switch for cheapest ' + sw.blocks * 30 + ' minute block', true);
+            }
+          } else {
+            sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
+            sw.state = false;
           }
-        } else {
-          sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
-          sw.state = false;
-        }
-      });
+        });
+      }
 
       let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
       if(currentSlot) {
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
-        swNegative.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= 0.00);
-        swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= customLowPriceThreshold);
+        if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= 0.00);
+        if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= customLowPriceThreshold);
       }
 
     }, 10000);
@@ -122,5 +137,12 @@ export class AgileOctopusAccessory {
       this.platform.log.info(`The cheapest ${sw.blocks*30} minute slot is between ${sw.cheapestPeriod.startTime.toISOString()} and ${sw.cheapestPeriod.endTime.toISOString()}, cost: ${sw.cheapestPeriod.meanCost}`);
     });
     return;
+  }
+
+  async deregisterService(serviceName) {
+    if(this.accessory.getService(serviceName)) {
+      let service: any = this.accessory.getService(serviceName);
+      this.accessory.removeService(service);
+    }
   }
 }
