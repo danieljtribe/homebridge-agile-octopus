@@ -24,7 +24,7 @@
         "default": 15.0
       },
       "disableSwitches": {
-        "title": "Do not create switches for lowest price periods, only display the current prive-per-unit",
+        "title": "Do not create switches for lowest price periods, only display the current price-per-unit",
         "type": "boolean",
         "required": false,
         "default": false
