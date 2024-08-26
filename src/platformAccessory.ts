@@ -6,6 +6,7 @@ const moment = require('moment');
 export class AgileOctopusAccessory {
   private service: Service;
   private switches = [] as any;
+  private customDevices = [] as any;
   private swNegative: any;
   private swCheapCustom: any;
   private data = {} as any;
@@ -27,26 +28,33 @@ export class AgileOctopusAccessory {
     var currentPrice = this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature);
     currentPrice.setProps({minStep: 0.01});
 
-    this.periodDefinitions.push({blocks: 1, id: 'c-30', title: 'Cheapest 30m period'});
-    this.periodDefinitions.push({blocks: 2, id: 'c-60', title: 'Cheapest 1hr period'});
-    this.periodDefinitions.push({blocks: 3, id: 'c-90', title: 'Cheapest 1hr and 30m period'});
-    this.periodDefinitions.push({blocks: 4, id: 'c-120', title: 'Cheapest 2hr period'});
-    this.periodDefinitions.push({blocks: 5, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
-    this.periodDefinitions.push({blocks: 6, id: 'c-180', title: 'Cheapest 3hr period'});
-    this.periodDefinitions.push({blocks: 7, id: 'c-210', title: 'Cheapest 3hr and 30m period'});
-    this.periodDefinitions.push({blocks: 8, id: 'c-240', title: 'Cheapest 4hr period'});
-    this.periodDefinitions.push({blocks: 9, id: 'c-270', title: 'Cheapest 4hr and 30m period'});
-    this.periodDefinitions.push({blocks: 10, id: 'c-300', title: 'Cheapest 5hr period'});
-    this.periodDefinitions.push({blocks: 11, id: 'c-330',title: 'Cheapest 5hr and 30m period'});
-    this.periodDefinitions.push({blocks: 12, id: 'c-360', title: 'Cheapest 6hr period'});
+    this.periodDefinitions.push({blocks: 1, contiguous: true, id: 'c-30', title: 'Cheapest 30m period'});
+    this.periodDefinitions.push({blocks: 2, contiguous: true, id: 'c-60', title: 'Cheapest 1hr period'});
+    this.periodDefinitions.push({blocks: 3, contiguous: true, id: 'c-90', title: 'Cheapest 1hr and 30m period'});
+    this.periodDefinitions.push({blocks: 4, contiguous: true, id: 'c-120', title: 'Cheapest 2hr period'});
+    this.periodDefinitions.push({blocks: 5, contiguous: false, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
+    this.periodDefinitions.push({blocks: 6, contiguous: true, id: 'c-180', title: 'Cheapest 3hr period'});
+    this.periodDefinitions.push({blocks: 7, contiguous: true, id: 'c-210', title: 'Cheapest 3hr and 30m period'});
+    this.periodDefinitions.push({blocks: 8, contiguous: true, id: 'c-240', title: 'Cheapest 4hr period'});
+    this.periodDefinitions.push({blocks: 9, contiguous: true, id: 'c-270', title: 'Cheapest 4hr and 30m period'});
+    this.periodDefinitions.push({blocks: 10, contiguous: true, id: 'c-300', title: 'Cheapest 5hr period'});
+    this.periodDefinitions.push({blocks: 11, contiguous: true, id: 'c-330',title: 'Cheapest 5hr and 30m period'});
+    this.periodDefinitions.push({blocks: 12, contiguous: true, id: 'c-360', title: 'Cheapest 6hr period'});
 
     this.init();
   }
 
   async init() {
     if(!this.config.disableSwitches) {
+      if(this.config.customDevices) {
+        this.config.customDevices.forEach(customDevice => {
+          this.customDevices.push(customDevice);
+          this.periodDefinitions.push({blocks: customDevice.hours * 2, id: customDevice.name, title: customDevice.name});
+        });
+      }
+
       this.periodDefinitions.forEach(period => {
-        this.switches.push({blocks: period.blocks, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
+        this.switches.push({blocks: period.blocks, contiguous: period.contiguous, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
       });
       this.swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
       this.swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
@@ -60,7 +68,7 @@ export class AgileOctopusAccessory {
 
     await this.refreshData();
 
-    const customLowPriceThreshold = (this.config.lowPriceThreshold && this.config.lowPriceThreshold.toFixed(2) !== NaN ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
+    const customLowPriceThreshold = (this.config.lowPriceThreshold && !Number.isNaN(this.config.lowPriceThreshold.toFixed(2)) ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
 
     // Set switch states - 10 seconds, there are probably more efficient ways to do this..
     setInterval(async () => {
@@ -70,7 +78,7 @@ export class AgileOctopusAccessory {
             if(!sw.state) {
               sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
               sw.state = true;
-              this.platform.log.info('Triggering switch for cheapest ' + sw.blocks * 30 + ' minute block', true);
+              this.platform.log.info(`Triggering switch for cheapest ${sw.blocks * 30} minute block (${sw.title})`, true);
             }
           } else {
             sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
@@ -94,7 +102,7 @@ export class AgileOctopusAccessory {
     }, 3600000);
   }
 
-  async calculateCheapest(data: any[], numberOfBlocks: number) {
+  async calculateCheapest(data: any[], numberOfBlocks: number, contiguous: boolean) {
     let blocks: any[] = [];
     data.forEach((block, index) => {
       let output: any = {
@@ -133,8 +141,8 @@ export class AgileOctopusAccessory {
     });
 
     await this.switches.forEach(async sw => {
-      sw.cheapestPeriod = await this.calculateCheapest(this.data, sw.blocks);
-      this.platform.log.info(`The cheapest ${sw.blocks*30} minute slot is between ${sw.cheapestPeriod.startTime.toISOString()} and ${sw.cheapestPeriod.endTime.toISOString()}, cost: ${sw.cheapestPeriod.meanCost}`);
+      sw.cheapestPeriod = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous);
+      this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriod.startTime.format('DD/MM HH:mm')} and ${sw.cheapestPeriod.endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriod.meanCost}`);
     });
     return;
   }

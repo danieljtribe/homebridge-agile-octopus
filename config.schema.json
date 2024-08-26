@@ -28,6 +28,45 @@
         "type": "boolean",
         "required": false,
         "default": false
+      },
+      "customDevices": {
+        "type": "array",
+        "title": "Custom Devices",
+        "noTitle": true,
+        "description": "Use this section to configure custom timings for devices which do not fit the standard outputs provided by this plugin. For example, a 'Hot Water' device could be configured to find the cheapest 3 hours to heat, but the segments found need to be between 04:00 and 09:00",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string",
+              "required": true
+            },
+            "hours": {
+              "type": "string",
+              "title": "Hours (decimal, eg. 0.5 for 30 minutes, 3.0 for 3 hours)",
+              "required": true
+            },
+            "startTime": {
+              "type": "string",
+              "title": "Start Time (the earliest time this device can switch on)",
+              "required": true,
+              "default": "00:00"
+            },
+            "endtime": {
+              "type": "string",
+              "title": "End Time (the latest time this device can switch on)",
+              "required": true,
+              "default": "16:00"
+            },
+            "combineSlots": {
+              "type": "boolean",
+              "title": "Combine slots (require a continuous block of time)",
+              "required": true,
+              "default": true
+            }
+          }
+        }
       }
     }
   }
