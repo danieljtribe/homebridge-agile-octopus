@@ -1,4 +1,4 @@
-import { Service, PlatformAccessory } from 'homebridge';
+import { Service, PlatformAccessory, Float32 } from 'homebridge';
 
 import { AgileOctopusPlatform } from './platform';
 const moment = require('moment');
@@ -10,6 +10,7 @@ export class AgileOctopusAccessory {
   private swNegative: any;
   private swCheapCustom: any;
   private data = {} as any;
+  private customLowPriceThreshold: number = 0.00;
 
   private periodDefinitions = [] as any;
 
@@ -32,7 +33,7 @@ export class AgileOctopusAccessory {
     this.periodDefinitions.push({blocks: 2, contiguous: true, id: 'c-60', title: 'Cheapest 1hr period'});
     this.periodDefinitions.push({blocks: 3, contiguous: true, id: 'c-90', title: 'Cheapest 1hr and 30m period'});
     this.periodDefinitions.push({blocks: 4, contiguous: true, id: 'c-120', title: 'Cheapest 2hr period'});
-    this.periodDefinitions.push({blocks: 5, contiguous: false, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
+    this.periodDefinitions.push({blocks: 5, contiguous: true, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
     this.periodDefinitions.push({blocks: 6, contiguous: true, id: 'c-180', title: 'Cheapest 3hr period'});
     this.periodDefinitions.push({blocks: 7, contiguous: true, id: 'c-210', title: 'Cheapest 3hr and 30m period'});
     this.periodDefinitions.push({blocks: 8, contiguous: true, id: 'c-240', title: 'Cheapest 4hr period'});
@@ -54,7 +55,7 @@ export class AgileOctopusAccessory {
       }
 
       this.periodDefinitions.forEach(period => {
-        this.switches.push({blocks: period.blocks, contiguous: period.contiguous, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
+        this.switches.push({title: period.title, blocks: period.blocks, contiguous: period.contiguous, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
       });
       this.swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
       this.swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
@@ -68,33 +69,14 @@ export class AgileOctopusAccessory {
 
     await this.refreshData();
 
-    const customLowPriceThreshold = (this.config.lowPriceThreshold && !Number.isNaN(this.config.lowPriceThreshold.toFixed(2)) ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
+    this.customLowPriceThreshold = (this.config.lowPriceThreshold && !Number.isNaN(this.config.lowPriceThreshold.toFixed(2)) ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
 
-    // Set switch states - 10 seconds, there are probably more efficient ways to do this..
+    this.actuateSwitches();
+
+    // Set switch states - 30 seconds, there are probably more efficient ways to do this..
     setInterval(async () => {
-      if(!this.config.disableSwitches) {
-        this.switches.forEach(async sw => {
-          if(moment().isAfter(sw.cheapestPeriod.startTime) && moment().isBefore(sw.cheapestPeriod.endTime)) {
-            if(!sw.state) {
-              sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
-              sw.state = true;
-              this.platform.log.info(`Triggering switch for cheapest ${sw.blocks * 30} minute block (${sw.title})`, true);
-            }
-          } else {
-            sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
-            sw.state = false;
-          }
-        });
-      }
-
-      let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
-      if(currentSlot) {
-        this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
-        if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= 0.00);
-        if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= customLowPriceThreshold);
-      }
-
-    }, 10000);
+      this.actuateSwitches();
+    }, 30000);
 
     // Refresh data - 60 mins
     setInterval(async () => {
@@ -102,31 +84,76 @@ export class AgileOctopusAccessory {
     }, 3600000);
   }
 
-  async calculateCheapest(data: any[], numberOfBlocks: number, contiguous: boolean) {
-    let blocks: any[] = [];
-    data.forEach((block, index) => {
-      let output: any = {
-        data: []
-      };
-      for(let i = index; i < index + numberOfBlocks && data.length >= index + numberOfBlocks; i++) {
-        output.data.push(data[i]);
-      }
-      if(output.data.length === numberOfBlocks) blocks.push(output);
-    });
-    blocks.forEach(block => {
-      block.meanCost = 0;
-      block.data.forEach(timeBlock => {
-        block.meanCost += timeBlock.value_inc_vat;
+  async actuateSwitches() {
+    if(!this.config.disableSwitches) {
+      this.switches.forEach(async sw => {
+        let state = false;
+        sw.cheapestPeriods.forEach(cheapestPeriod => {
+          if(moment().isAfter(cheapestPeriod.startTime) && moment().isBefore(cheapestPeriod.endTime)) {
+            state = true;
+          }
+        });
+
+        if(state) {
+          if(!sw.state) this.platform.log.info(`Triggering switch for cheapest ${sw.blocks * 30} minute block (${sw.title})`);
+          sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
+          sw.state = true;
+        } else {
+          if(sw.state) this.platform.log.debug(`Turning off ${sw.title}, end time passed`);
+          sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
+          sw.state = false;
+        }
       });
-      block.meanCost = (block.meanCost / block.data.length).toFixed(2);
-      block.startTime = moment(block.data[block.data.length-1].valid_from);
-      block.endTime = moment(block.data[0].valid_to);
-      //delete(block.data);
-    });
-    blocks.sort((a, b) => {
-      return a.meanCost - b.meanCost;
-    });
-    return blocks.length > 0 ? blocks[0] : [];
+    }
+
+    let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
+    if(currentSlot) {
+      this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
+      if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= 0.00);
+      if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= this.customLowPriceThreshold);
+    }
+  }
+
+  async calculateCheapest(octopusTimeslots: any[], numberOfBlocks: number, contiguous: boolean) {
+    let blocks: any[] = [];
+    if(contiguous) {
+      octopusTimeslots.forEach((_, index) => {
+        let output: any = {
+          octopusTimeslots: []
+        };
+        for(let i = index; i < index + numberOfBlocks && octopusTimeslots.length >= index + numberOfBlocks; i++) {
+          output.octopusTimeslots.push(octopusTimeslots[i]);
+        }
+        if(output.octopusTimeslots.length === numberOfBlocks) blocks.push(output);
+      });
+      blocks.forEach(block => {
+        block.meanCost = 0;
+        block.octopusTimeslots.forEach(timeBlock => {
+          block.meanCost += timeBlock.value_inc_vat;
+        });
+        block.meanCost = (block.meanCost / block.octopusTimeslots.length).toFixed(2);
+        block.startTime = moment(block.octopusTimeslots[block.octopusTimeslots.length-1].valid_from);
+        block.endTime = moment(block.octopusTimeslots[0].valid_to);
+      });
+      blocks.sort((a, b) => {
+        return a.meanCost - b.meanCost;
+      });
+      return blocks.length > 0 ? [blocks[0]] : [];
+    } else if(!contiguous) {
+      octopusTimeslots.sort((a, b) => {
+        return a.value_inc_vat - b.value_inc_vat;
+      });
+      const slicedOctopusTimeslots = octopusTimeslots.slice(0, numberOfBlocks);
+      blocks = slicedOctopusTimeslots.map(timeslot => {
+        return {
+          octopusTimeslots: timeslot,
+          meanCost: timeslot.value_inc_vat,
+          startTime: moment(timeslot.valid_from),
+          endTime: moment(timeslot.valid_to),
+        }
+      })
+    }
+    return blocks.length > 0 ? blocks : [];
   }
 
   async refreshData() {
@@ -141,8 +168,13 @@ export class AgileOctopusAccessory {
     });
 
     await this.switches.forEach(async sw => {
-      sw.cheapestPeriod = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous);
-      this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriod.startTime.format('DD/MM HH:mm')} and ${sw.cheapestPeriod.endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriod.meanCost}`);
+      sw.cheapestPeriods = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous);
+      if(sw.contiguous) {
+        this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriods[0].startTime.format('DD/MM: HH:mm')} and ${sw.cheapestPeriods[0].endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriods[0].meanCost}`);
+      } else {
+        this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks} slots are between:`);
+        sw.cheapestPeriods.forEach(period => { this.platform.log.info(`${period.startTime.format('DD/MM: HH:mm')} and ${period.endTime.format('HH:mm (UTC Z)')}, cost: ${period.meanCost.toFixed(2)}p`)});
+      }
     });
     return;
   }
