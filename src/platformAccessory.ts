@@ -50,7 +50,7 @@ export class AgileOctopusAccessory {
       if(this.config.customDevices) {
         this.config.customDevices.forEach(customDevice => {
           this.customDevices.push(customDevice);
-          this.periodDefinitions.push({blocks: customDevice.hours * 2, id: customDevice.name, title: customDevice.name});
+          this.periodDefinitions.push({blocks: customDevice.hours * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name});
         });
       }
 
