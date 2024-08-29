@@ -5,6 +5,7 @@
   "version": "1.2.0",
   "description": "A simple plugin to publish switches to Homebridge, which can toggle on during the cleapest 30 minute, 60 minute etc... time periods.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/danieljtribe/homebridge-agile-octopus",
   "repository": {
     "type": "git",
     "url": "git://github.com/danieljtribe/homebridge-agile-octopus"
@@ -24,7 +25,9 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "octopus energy",
+    "octopus energy agile"
   ],
   "dependencies": {
     "got": "^11.7.0",
