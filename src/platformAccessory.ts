@@ -1,5 +1,4 @@
-import { Service, PlatformAccessory, Float32 } from 'homebridge';
-
+import { Service, PlatformAccessory } from 'homebridge';
 import { AgileOctopusPlatform } from './platform';
 const moment = require('moment');
 
@@ -50,12 +49,14 @@ export class AgileOctopusAccessory {
       if(this.config.customDevices) {
         this.config.customDevices.forEach(customDevice => {
           this.customDevices.push(customDevice);
-          this.periodDefinitions.push({blocks: customDevice.hours * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name});
+          const startTime = Number(customDevice.startTime.substring(0, 2));
+          const endTime = Number(customDevice.endTime.substring(0, 2));
+          this.periodDefinitions.push({blocks: customDevice.hours * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name, startTime: startTime, endTime: endTime});
         });
       }
 
       this.periodDefinitions.forEach(period => {
-        this.switches.push({title: period.title, blocks: period.blocks, contiguous: period.contiguous, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
+        this.switches.push({title: period.title, blocks: period.blocks, contiguous: period.contiguous, startTime: period.startTime, endTime: period.endTime, accessory: this.accessory.getService(period.title) || this.accessory.addService(this.platform.Service.Switch, period.title, period.id)});
       });
       this.swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
       this.swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
@@ -68,7 +69,6 @@ export class AgileOctopusAccessory {
     }
 
     await this.refreshData();
-
     this.customLowPriceThreshold = (this.config.lowPriceThreshold && !Number.isNaN(this.config.lowPriceThreshold.toFixed(2)) ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
 
     this.actuateSwitches();
@@ -114,8 +114,18 @@ export class AgileOctopusAccessory {
     }
   }
 
-  async calculateCheapest(octopusTimeslots: any[], numberOfBlocks: number, contiguous: boolean) {
+  async calculateCheapest(octopusTimeslots: any[], numberOfBlocks: number, contiguous: boolean, startTime: string | boolean = false, endTime: string | boolean = false) {
     let blocks: any[] = [];
+
+    if(startTime || endTime) {
+      const startMoment = moment().hour(startTime).minute(0).seconds(0);
+      const endMoment = moment().hour(endTime).minute(0).seconds(0);
+
+      octopusTimeslots = octopusTimeslots.filter(timeslot => {
+        return(timeslot.startMoment.isAfter(startMoment) && timeslot.endMoment.isBefore(endMoment));
+      });
+    }
+
     if(contiguous) {
       octopusTimeslots.forEach((_, index) => {
         let output: any = {
@@ -168,7 +178,7 @@ export class AgileOctopusAccessory {
     });
 
     await this.switches.forEach(async sw => {
-      sw.cheapestPeriods = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous);
+      sw.cheapestPeriods = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous, sw.startTime, sw.endTime);
       if(sw.contiguous) {
         this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriods[0].startTime.format('DD/MM: HH:mm')} and ${sw.cheapestPeriods[0].endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriods[0].meanCost}`);
       } else {
