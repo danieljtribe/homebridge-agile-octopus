@@ -1,17 +1,19 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { AgileOctopusPlatform } from './platform';
+import { SearchPeriod, CustomDevice } from './types/switches';
+
 const moment = require('moment');
 
 export class AgileOctopusAccessory {
   private service: Service;
   private switches = [] as any;
-  private customDevices = [] as any;
   private swNegative: any;
   private swCheapCustom: any;
   private data = {} as any;
   private customLowPriceThreshold: number = 0.00;
 
-  private periodDefinitions = [] as any;
+  private periodDefinitions = [] as SearchPeriod[];
+  private customDevices = [] as CustomDevice[];
 
   constructor(
     private readonly platform: AgileOctopusPlatform,
@@ -47,11 +49,11 @@ export class AgileOctopusAccessory {
   async init() {
     if(!this.config.disableSwitches) {
       if(this.config.customDevices) {
-        this.config.customDevices.forEach(customDevice => {
+        this.config.customDevices.forEach((customDevice: CustomDevice) => {
           this.customDevices.push(customDevice);
           const startTime = Number(customDevice.startTime?.substring(0, 2) || 0);
           const endTime = Number(customDevice.endTime?.substring(0, 2) || 0);
-          this.periodDefinitions.push({blocks: customDevice.hours * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name, startTime: startTime, endTime: endTime});
+          this.periodDefinitions.push({blocks: Number(customDevice.hours) * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name, startTime: startTime, endTime: endTime});
         });
       }
 
