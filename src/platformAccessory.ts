@@ -49,8 +49,8 @@ export class AgileOctopusAccessory {
       if(this.config.customDevices) {
         this.config.customDevices.forEach(customDevice => {
           this.customDevices.push(customDevice);
-          const startTime = Number(customDevice.startTime.substring(0, 2));
-          const endTime = Number(customDevice.endTime.substring(0, 2));
+          const startTime = Number(customDevice.startTime?.substring(0, 2) || 0);
+          const endTime = Number(customDevice.endTime?.substring(0, 2) || 0);
           this.periodDefinitions.push({blocks: customDevice.hours * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name, startTime: startTime, endTime: endTime});
         });
       }
@@ -114,7 +114,7 @@ export class AgileOctopusAccessory {
     }
   }
 
-  async calculateCheapest(octopusTimeslots: any[], numberOfBlocks: number, contiguous: boolean, startTime: string | boolean = false, endTime: string | boolean = false) {
+  async calculateCheapest(octopusTimeslots: any[], numberOfBlocks: number, contiguous: boolean, startTime: string | boolean = false, endTime: string | boolean = false): Promise<any[]> {
     let blocks: any[] = [];
 
     if(startTime || endTime) {
@@ -122,7 +122,14 @@ export class AgileOctopusAccessory {
       const endMoment = moment().hour(endTime).minute(0).seconds(0);
 
       octopusTimeslots = octopusTimeslots.filter(timeslot => {
-        return(timeslot.startMoment.isAfter(startMoment) && timeslot.endMoment.isBefore(endMoment));
+        return(
+          (timeslot.startMoment.hour() >= startMoment.hour()) &&
+          (timeslot.endMoment.hour() <= endMoment.hour())
+        );
+      });
+      octopusTimeslots.sort((a, b) => {
+        // Return slots in reverse order
+        return a.startMoment.isBefore(b, 'hour') ? -1 : 1;
       });
     }
 
@@ -179,11 +186,16 @@ export class AgileOctopusAccessory {
 
     await this.switches.forEach(async sw => {
       sw.cheapestPeriods = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous, sw.startTime, sw.endTime);
-      if(sw.contiguous) {
-        this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriods[0].startTime.format('DD/MM: HH:mm')} and ${sw.cheapestPeriods[0].endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriods[0].meanCost}`);
+      const slotCount: number = sw.cheapestPeriods.length;
+      if(slotCount > 0) {
+        if(sw.contiguous) {
+          this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriods[0].startTime.format('DD/MM: HH:mm')} and ${sw.cheapestPeriods[0].endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriods[0].meanCost}`);
+        } else {
+          this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks} slots are between:`);
+          sw.cheapestPeriods.forEach(period => { this.platform.log.info(`${period.startTime.format('DD/MM: HH:mm')} and ${period.endTime.format('HH:mm (UTC Z)')}, cost: ${period.meanCost.toFixed(2)}p`)});
+        }
       } else {
-        this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks} slots are between:`);
-        sw.cheapestPeriods.forEach(period => { this.platform.log.info(`${period.startTime.format('DD/MM: HH:mm')} and ${period.endTime.format('HH:mm (UTC Z)')}, cost: ${period.meanCost.toFixed(2)}p`)});
+        this.platform.log.info(`${sw.accessory.displayName}: No suitable times found`);
       }
     });
     return;
