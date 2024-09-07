@@ -1,8 +1,6 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { AgileOctopusPlatform } from './platform';
 import { SearchPeriod, CustomDevice } from './types/switches';
-import { start } from 'repl';
-
 const moment = require('moment');
 
 export class AgileOctopusAccessory {
