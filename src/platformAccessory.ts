@@ -1,17 +1,18 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { AgileOctopusPlatform } from './platform';
+import { SearchPeriod, CustomDevice } from './types/switches';
 const moment = require('moment');
 
 export class AgileOctopusAccessory {
   private service: Service;
   private switches = [] as any;
-  private customDevices = [] as any;
   private swNegative: any;
   private swCheapCustom: any;
   private data = {} as any;
   private customLowPriceThreshold: number = 0.00;
 
-  private periodDefinitions = [] as any;
+  private periodDefinitions = [] as SearchPeriod[];
+  private customDevices = [] as CustomDevice[];
 
   constructor(
     private readonly platform: AgileOctopusPlatform,
@@ -25,7 +26,7 @@ export class AgileOctopusAccessory {
 
     this.service = this.accessory.getService(this.platform.Service.TemperatureSensor) || this.accessory.addService(this.platform.Service.TemperatureSensor);
     this.service.setCharacteristic(this.platform.Characteristic.Name, "Current price per unit");
-    var currentPrice = this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature);
+    const currentPrice = this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature);
     currentPrice.setProps({minStep: 0.01});
 
     this.periodDefinitions.push({blocks: 1, contiguous: true, id: 'c-30', title: 'Cheapest 30m period'});
@@ -47,11 +48,11 @@ export class AgileOctopusAccessory {
   async init() {
     if(!this.config.disableSwitches) {
       if(this.config.customDevices) {
-        this.config.customDevices.forEach(customDevice => {
+        this.config.customDevices.forEach((customDevice: CustomDevice) => {
           this.customDevices.push(customDevice);
           const startTime = Number(customDevice.startTime?.substring(0, 2) || 0);
           const endTime = Number(customDevice.endTime?.substring(0, 2) || 0);
-          this.periodDefinitions.push({blocks: customDevice.hours * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name, startTime: startTime, endTime: endTime});
+          this.periodDefinitions.push({blocks: Number(customDevice.hours) * 2, contiguous: customDevice.combineSlots, id: customDevice.name, title: customDevice.name, startTime: startTime, endTime: endTime});
         });
       }
 
@@ -123,8 +124,8 @@ export class AgileOctopusAccessory {
 
       octopusTimeslots = octopusTimeslots.filter(timeslot => {
         return(
-          (timeslot.startMoment.hour() >= startMoment.hour()) &&
-          (timeslot.endMoment.hour() <= endMoment.hour())
+          (timeslot.startMoment.hour() >= startMoment.hour() && timeslot.startMoment.hour() <= endMoment.hour()) &&
+          (timeslot.endMoment.hour() <= endMoment.hour() && timeslot.endMoment.hour() >= startMoment.hour())
         );
       });
       octopusTimeslots.sort((a, b) => {
@@ -175,8 +176,8 @@ export class AgileOctopusAccessory {
 
   async refreshData() {
     const got = require('got');
-    let page: string = `https://api.octopus.energy/v1/products/AGILE-18-02-21/electricity-tariffs/E-1R-AGILE-18-02-21-${this.config.region}/standard-unit-rates/?period_from=${moment().hour() < 16 ? moment().subtract(1, 'day').hour(16).minute(0).toISOString() : moment().hour(16).minute(0).toISOString()}`;
-    let body: any = JSON.parse((await got(page)).body);
+    const page: string = `https://api.octopus.energy/v1/products/AGILE-18-02-21/electricity-tariffs/E-1R-AGILE-18-02-21-${this.config.region}/standard-unit-rates/?period_from=${moment().hour() < 16 ? moment().subtract(1, 'day').hour(16).minute(0).toISOString() : moment().hour(16).minute(0).toISOString()}`;
+    const body: any = JSON.parse((await got(page)).body);
     this.data = body.results;
 
     await this.data.forEach(slot => {
