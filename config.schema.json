@@ -53,7 +53,7 @@
               "required": true,
               "default": "00:00"
             },
-            "endtime": {
+            "endTime": {
               "type": "string",
               "title": "End Time (the latest time this device can switch on)",
               "required": true,
