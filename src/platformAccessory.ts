@@ -126,7 +126,7 @@ export class AgileOctopusAccessory {
 
       octopusTimeslots = octopusTimeslots.filter(timeslot => {
         return(
-          (timeslot.startMoment.hour() >= startMoment.hour() && timeslot.startMoment.hour() < endMoment.hour()) &&
+          (timeslot.startMoment.hour() >= startMoment.hour() && timeslot.startMoment.hour() <= endMoment.hour()) &&
           (timeslot.endMoment.hour() <= endMoment.hour() && timeslot.endMoment.hour() >= startMoment.hour())
         );
       });
