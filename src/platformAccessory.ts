@@ -1,6 +1,8 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { AgileOctopusPlatform } from './platform';
 import { SearchPeriod, CustomDevice } from './types/switches';
+import { OctopusAPITimeslotResponse } from './types/octopus';
+
 const moment = require('moment');
 
 export class AgileOctopusAccessory {
@@ -8,9 +10,9 @@ export class AgileOctopusAccessory {
   private switches = [] as any;
   private swNegative: any;
   private swCheapCustom: any;
-  private data = {} as any;
   private customLowPriceThreshold: number = 0.00;
 
+  private data = {} as OctopusAPITimeslotResponse[];
   private periodDefinitions = [] as SearchPeriod[];
   private customDevices = [] as CustomDevice[];
 
@@ -110,8 +112,8 @@ export class AgileOctopusAccessory {
     let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
     if(currentSlot) {
       this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
-      if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= 0.00);
-      if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, currentSlot[0].value_inc_vat.toFixed(2) <= this.customLowPriceThreshold);
+      if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(0.00));
+      if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(this.customLowPriceThreshold));
     }
   }
 
