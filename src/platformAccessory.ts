@@ -51,6 +51,10 @@ export class AgileOctopusAccessory {
     if(!this.config.disableSwitches) {
       if(this.config.customDevices) {
         this.config.customDevices.forEach((customDevice: CustomDevice) => {
+          if(!customDevice.name || !customDevice.startTime || !customDevice.endTime) {
+            this.platform.log.warn("Custom device not added, please check that a name, start time and end time have been defined");
+            return;
+          }
           this.customDevices.push(customDevice);
           const startTime = Number(customDevice.startTime?.substring(0, 2) || 0);
           const endTime = Number(customDevice.endTime?.substring(0, 2) || 0);
