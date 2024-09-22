@@ -12,7 +12,7 @@ export class AgileOctopusAccessory {
   private swCheapCustom: any;
   private customLowPriceThreshold: number = 0.00;
 
-  private data = {} as OctopusAPITimeslotResponse[];
+  private data = [] as OctopusAPITimeslotResponse[];
   private periodDefinitions = [] as SearchPeriod[];
   private customDevices = [] as CustomDevice[];
 
@@ -107,29 +107,35 @@ export class AgileOctopusAccessory {
     if(!this.config.disableSwitches) {
       this.switches.forEach(async sw => {
         let state = false;
-        sw.cheapestPeriods.forEach(cheapestPeriod => {
-          if(moment().isAfter(cheapestPeriod.startTime) && moment().isBefore(cheapestPeriod.endTime)) {
-            state = true;
-          }
-        });
+        if(sw.cheapestPeriods) {
+          sw.cheapestPeriods.forEach(cheapestPeriod => {
+            if(moment().isAfter(cheapestPeriod.startTime) && moment().isBefore(cheapestPeriod.endTime)) {
+              state = true;
+            }
+          });
 
-        if(state) {
-          if(!sw.state) this.platform.log.info(`Triggering switch for cheapest ${sw.blocks * 30} minute block (${sw.title})`);
-          sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
-          sw.state = true;
+          if(state) {
+            if(!sw.state) this.platform.log.info(`Triggering switch for cheapest ${sw.blocks * 30} minute block (${sw.title})`);
+            sw.accessory.updateCharacteristic(this.platform.Characteristic.On, true);
+            sw.state = true;
+          } else {
+            if(sw.state) this.platform.log.debug(`Turning off ${sw.title}, end time passed`);
+            sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
+            sw.state = false;
+          }
         } else {
-          if(sw.state) this.platform.log.debug(`Turning off ${sw.title}, end time passed`);
-          sw.accessory.updateCharacteristic(this.platform.Characteristic.On, false);
-          sw.state = false;
+          this.platform.log.warn(`No suitable time periods configured for switch "${sw.title}"`);
         }
       });
     }
 
-    let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
-    if(currentSlot) {
-      this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
-      if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(0.00));
-      if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(this.customLowPriceThreshold));
+    if(this.data.length > 0) {
+      let currentSlot = this.data.filter(slot => moment().isAfter(slot.startMoment) && moment().isBefore(slot.endMoment));
+      if(currentSlot) {
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
+        if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(0.00));
+        if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(this.customLowPriceThreshold));
+      }
     }
   }
 
@@ -221,6 +227,7 @@ export class AgileOctopusAccessory {
       return;
     } catch(e) {
       this.platform.log.warn("Unable to fetch current rates, will retry shortly.");
+      this.data = [];
     }
   }
 
