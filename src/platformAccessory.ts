@@ -227,6 +227,7 @@ export class AgileOctopusAccessory {
       return;
     } catch(e) {
       this.platform.log.warn("Unable to fetch current rates, will retry shortly.");
+      this.data = [];
     }
   }
 
