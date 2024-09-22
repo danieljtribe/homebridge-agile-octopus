@@ -31,20 +31,32 @@ export class AgileOctopusAccessory {
     const currentPrice = this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature);
     currentPrice.setProps({minStep: 0.01});
 
-    this.periodDefinitions.push({blocks: 1, contiguous: true, id: 'c-30', title: 'Cheapest 30m period'});
-    this.periodDefinitions.push({blocks: 2, contiguous: true, id: 'c-60', title: 'Cheapest 1hr period'});
-    this.periodDefinitions.push({blocks: 3, contiguous: true, id: 'c-90', title: 'Cheapest 1hr and 30m period'});
-    this.periodDefinitions.push({blocks: 4, contiguous: true, id: 'c-120', title: 'Cheapest 2hr period'});
-    this.periodDefinitions.push({blocks: 5, contiguous: true, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
-    this.periodDefinitions.push({blocks: 6, contiguous: true, id: 'c-180', title: 'Cheapest 3hr period'});
-    this.periodDefinitions.push({blocks: 7, contiguous: true, id: 'c-210', title: 'Cheapest 3hr and 30m period'});
-    this.periodDefinitions.push({blocks: 8, contiguous: true, id: 'c-240', title: 'Cheapest 4hr period'});
-    this.periodDefinitions.push({blocks: 9, contiguous: true, id: 'c-270', title: 'Cheapest 4hr and 30m period'});
-    this.periodDefinitions.push({blocks: 10, contiguous: true, id: 'c-300', title: 'Cheapest 5hr period'});
-    this.periodDefinitions.push({blocks: 11, contiguous: true, id: 'c-330',title: 'Cheapest 5hr and 30m period'});
-    this.periodDefinitions.push({blocks: 12, contiguous: true, id: 'c-360', title: 'Cheapest 6hr period'});
+    if(!this.validateConfig(this.config)) {
+      this.platform.log.error("Incorrect configuration JSON provided for homebridge-agile-octopus, please check the service documentation [https://github.com/danieljtribe/homebridge-agile-octopus] or configure using the homebridge-config-ui-x plugin");
+    } else {
+      this.periodDefinitions.push({blocks: 1, contiguous: true, id: 'c-30', title: 'Cheapest 30m period'});
+      this.periodDefinitions.push({blocks: 2, contiguous: true, id: 'c-60', title: 'Cheapest 1hr period'});
+      this.periodDefinitions.push({blocks: 3, contiguous: true, id: 'c-90', title: 'Cheapest 1hr and 30m period'});
+      this.periodDefinitions.push({blocks: 4, contiguous: true, id: 'c-120', title: 'Cheapest 2hr period'});
+      this.periodDefinitions.push({blocks: 5, contiguous: true, id: 'c-150', title: 'Cheapest 2hr and 30m period'});
+      this.periodDefinitions.push({blocks: 6, contiguous: true, id: 'c-180', title: 'Cheapest 3hr period'});
+      this.periodDefinitions.push({blocks: 7, contiguous: true, id: 'c-210', title: 'Cheapest 3hr and 30m period'});
+      this.periodDefinitions.push({blocks: 8, contiguous: true, id: 'c-240', title: 'Cheapest 4hr period'});
+      this.periodDefinitions.push({blocks: 9, contiguous: true, id: 'c-270', title: 'Cheapest 4hr and 30m period'});
+      this.periodDefinitions.push({blocks: 10, contiguous: true, id: 'c-300', title: 'Cheapest 5hr period'});
+      this.periodDefinitions.push({blocks: 11, contiguous: true, id: 'c-330',title: 'Cheapest 5hr and 30m period'});
+      this.periodDefinitions.push({blocks: 12, contiguous: true, id: 'c-360', title: 'Cheapest 6hr period'});
 
-    this.init();
+      this.init();
+    }
+  }
+
+  validateConfig(config) {
+    const configKeys = Object.keys(config);
+    return(
+      configKeys.includes("name") &&
+      configKeys.includes("region")
+    )
   }
 
   async init() {
@@ -181,31 +193,35 @@ export class AgileOctopusAccessory {
   }
 
   async refreshData() {
-    const got = require('got');
-    const page: string = `https://api.octopus.energy/v1/products/AGILE-18-02-21/electricity-tariffs/E-1R-AGILE-18-02-21-${this.config.region}/standard-unit-rates/?period_from=${moment().hour() < 16 ? moment().subtract(1, 'day').hour(16).minute(0).toISOString() : moment().hour(16).minute(0).toISOString()}`;
-    const body: any = JSON.parse((await got(page)).body);
-    this.data = body.results;
+    try {
+      const got = require('got');
+      const page: string = `https://api.octopus.energy/v1/products/AGILE-18-02-21/electricity-tariffs/E-1R-AGILE-18-02-21-${this.config.region}/standard-unit-rates/?period_from=${moment().hour() < 16 ? moment().subtract(1, 'day').hour(16).minute(0).toISOString() : moment().hour(16).minute(0).toISOString()}`;
+      const body: any = JSON.parse((await got(page)).body);
+      this.data = body.results;
 
-    await this.data.forEach(slot => {
-      slot.startMoment = moment(slot.valid_from);
-      slot.endMoment = moment(slot.valid_to);
-    });
+      await this.data.forEach(slot => {
+        slot.startMoment = moment(slot.valid_from);
+        slot.endMoment = moment(slot.valid_to);
+      });
 
-    await this.switches.forEach(async sw => {
-      sw.cheapestPeriods = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous, sw.startTime, sw.endTime);
-      const slotCount: number = sw.cheapestPeriods.length;
-      if(slotCount > 0) {
-        if(sw.contiguous) {
-          this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriods[0].startTime.format('DD/MM: HH:mm')} and ${sw.cheapestPeriods[0].endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriods[0].meanCost}`);
+      await this.switches.forEach(async sw => {
+        sw.cheapestPeriods = await this.calculateCheapest(this.data, sw.blocks, sw.contiguous, sw.startTime, sw.endTime);
+        const slotCount: number = sw.cheapestPeriods.length;
+        if(slotCount > 0) {
+          if(sw.contiguous) {
+            this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks * 30} minute slot is between ${sw.cheapestPeriods[0].startTime.format('DD/MM: HH:mm')} and ${sw.cheapestPeriods[0].endTime.format('HH:mm (UTC Z)')}, average cost: ${sw.cheapestPeriods[0].meanCost}`);
+          } else {
+            this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks} slots are between:`);
+            sw.cheapestPeriods.forEach(period => { this.platform.log.info(`${period.startTime.format('DD/MM: HH:mm')} and ${period.endTime.format('HH:mm (UTC Z)')}, cost: ${period.meanCost.toFixed(2)}p`)});
+          }
         } else {
-          this.platform.log.info(`${sw.accessory.displayName}: the cheapest ${sw.blocks} slots are between:`);
-          sw.cheapestPeriods.forEach(period => { this.platform.log.info(`${period.startTime.format('DD/MM: HH:mm')} and ${period.endTime.format('HH:mm (UTC Z)')}, cost: ${period.meanCost.toFixed(2)}p`)});
+          this.platform.log.info(`${sw.accessory.displayName}: No suitable times found`);
         }
-      } else {
-        this.platform.log.info(`${sw.accessory.displayName}: No suitable times found`);
-      }
-    });
-    return;
+      });
+      return;
+    } catch(e) {
+      this.platform.log.warn("Unable to fetch current rates, will retry shortly.");
+    }
   }
 
   async deregisterService(serviceName) {
