@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Homebridge Agile Octopus Rates",
   "name": "homebridge-agile-octopus-rates",
-  "version": "1.2.9",
+  "version": "1.2.10",
   "description": "A simple plugin to publish switches to Homebridge, which can toggle on during the cleapest 30 minute, 60 minute etc... time periods.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/danieljtribe/homebridge-agile-octopus",
@@ -44,5 +44,9 @@
     "rimraf": "^3.0.2",
     "ts-node": "^9.0.0",
     "typescript": "^4.0.2"
+  },
+  "funding": {
+    "type" : "kofi",
+    "url" : "https://ko-fi.com/a113daniel"
   }
 }
