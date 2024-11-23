@@ -1,0 +1,39 @@
+{
+    "name": "Agile Octopus Rates",
+    "octopusApiKey": "",
+    "region": "L",
+    "lowPriceThreshold": 15.0,
+    "highPriceThreshold": 30.0,
+    "disableSwitches": false,
+    "customDevices": [
+        {
+            "name": "Cheapest Afternoon Hour (Combined Slots)",
+            "hours": "1.0",
+            "startTime": "15:00",
+            "endTime": "16:00",
+            "combineSlots": true
+        },
+        {
+            "name": "Hot Water (Uncombined Slots)",
+            "hours": "2.5",
+            "startTime": "00:00",
+            "endTime": "08:00",
+            "combineSlots": false
+        },
+        {
+            "name": "Continuous Block",
+            "hours": "2.5",
+            "startTime": "00:00",
+            "endTime": "16:00",
+            "combineSlots": true
+        },
+        {
+            "name": "Non-continuous Block",
+            "hours": "2.5",
+            "startTime": "00:00",
+            "endTime": "16:00",
+            "combineSlots": false
+        }
+    ],
+    "platform": "AgileOctopusRates"
+}

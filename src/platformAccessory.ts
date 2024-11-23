@@ -10,7 +10,9 @@ export class AgileOctopusAccessory {
   private switches = [] as any;
   private swNegative: any;
   private swCheapCustom: any;
+  private swExpensiveCustom: any;
   private customLowPriceThreshold: number = 0.00;
+  private customHighPriceThreshold: number = 0.00;
 
   private data = [] as OctopusAPITimeslotResponse[];
   private periodDefinitions = [] as SearchPeriod[];
@@ -79,6 +81,7 @@ export class AgileOctopusAccessory {
       });
       this.swNegative = this.accessory.getService('Negative price period') || this.accessory.addService(this.platform.Service.Switch, 'Negative price period', 'n-30');
       this.swCheapCustom = this.accessory.getService('Low price period') || this.accessory.addService(this.platform.Service.Switch, 'Low price period', 'c-custom');
+      this.swExpensiveCustom = this.accessory.getService('High price period') || this.accessory.addService(this.platform.Service.Switch, 'High price period', 'c-custom-high');
     } else {
       this.periodDefinitions.forEach(async period => {
         await this.deregisterService(period.title);
@@ -88,7 +91,8 @@ export class AgileOctopusAccessory {
     }
 
     await this.refreshData();
-    this.customLowPriceThreshold = (this.config.lowPriceThreshold && !Number.isNaN(this.config.lowPriceThreshold.toFixed(2)) ? this.config.lowPriceThreshold.toFixed(2) : 10.00);
+    this.customLowPriceThreshold = (this.config.lowPriceThreshold && !Number.isNaN(this.config.lowPriceThreshold.toFixed(2)) ? this.config.lowPriceThreshold.toFixed(2) : 15.00);
+    this.customHighPriceThreshold = (this.config.highPriceThreshold && !Number.isNaN(this.config.highPriceThreshold.toFixed(2)) ? this.config.highPriceThreshold.toFixed(2) : 30.00);
 
     this.actuateSwitches();
 
@@ -135,6 +139,7 @@ export class AgileOctopusAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, currentSlot[0].value_inc_vat.toFixed(2));
         if(!this.config.disableSwitches) this.swNegative.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(0.00));
         if(!this.config.disableSwitches) this.swCheapCustom.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) <= Number(this.customLowPriceThreshold));
+        if(!this.config.disableSwitches) this.swExpensiveCustom.updateCharacteristic(this.platform.Characteristic.On, Number(currentSlot[0].value_inc_vat) >= Number(this.customHighPriceThreshold));
       }
     }
   }

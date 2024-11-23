@@ -23,6 +23,12 @@
         "required": false,
         "default": 15.0
       },
+      "highPriceThreshold": {
+        "title": "High price threshold in pence",
+        "type": "number",
+        "required": false,
+        "default": 30.0
+      },
       "disableSwitches": {
         "title": "Do not create switches for lowest price periods, only display the current price per-unit",
         "type": "boolean",
